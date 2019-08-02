@@ -12,8 +12,17 @@ import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.Toast;
 
 
+import com.loopj.android.http.AsyncHttpClient;
+import com.loopj.android.http.JsonHttpResponseHandler;
+
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import cz.msebera.android.httpclient.Header;
+import java.lang.Throwable;
+
+//import org.json.JSONException;
+
 
 
 
@@ -21,7 +30,7 @@ public class MainActivity extends AppCompatActivity {
 
     // Constants:
     // TODO: Create the base URL
-    private final String BASE_URL = "https://apiv2.bitcoin ...";
+    private final String BASE_URL = "https://apiv2.bitcoinaverage.com/indices/global/ticker/BTC";
 
     // Member Variables:
     TextView mPriceTextView;
@@ -31,8 +40,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        mPriceTextView = (TextView) findViewById(R.id.priceLabel);
-        Spinner spinner = (Spinner) findViewById(R.id.currency_spinner);
+        mPriceTextView = findViewById(R.id.priceLabel);
+        Spinner spinner = findViewById(R.id.currency_spinner);
 
         // Create an ArrayAdapter using the String array and a spinner layout
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
@@ -44,36 +53,66 @@ public class MainActivity extends AppCompatActivity {
         // Apply the adapter to the spinner
         spinner.setAdapter(adapter);
 
-        // TODO: Set an OnItemSelected listener on the spinner
+        /*make API call based on what currency user selected in spinner*/
+        spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+
+                Log.d("Bitcoin", "" + adapterView.getItemAtPosition(i));
+                Log.d("Bitcoin", "Position is: " + i);
+
+                String finalUrl = BASE_URL + adapterView.getItemAtPosition(i);
+                Log.d("Bitcoin", "Final url is: " + finalUrl);
+                letsDoSomeNetworking(finalUrl);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) {
+                //first item selected by default, so this never happens
+                Log.d("Bitcoin","Nothing selected");
+            }
+        });
 
     }
 
-    // TODO: complete the letsDoSomeNetworking() method
+    /*make an API call to receive JSON response*/
     private void letsDoSomeNetworking(String url) {
 
-//        AsyncHttpClient client = new AsyncHttpClient();
-//        client.get(WEATHER_URL, params, new JsonHttpResponseHandler() {
-//
-//            @Override
-//            public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
-//                // called when response HTTP status is "200 OK"
-//                Log.d("Clima", "JSON: " + response.toString());
-//                WeatherDataModel weatherData = WeatherDataModel.fromJson(response);
-//                updateUI(weatherData);
-//            }
-//
-//            @Override
-//            public void onFailure(int statusCode, Header[] headers, Throwable e, JSONObject response) {
-//                // called when response HTTP status is "4XX" (eg. 401, 403, 404)
-//                Log.d("Clima", "Request fail! Status code: " + statusCode);
-//                Log.d("Clima", "Fail response: " + response);
-//                Log.e("ERROR", e.toString());
-//                Toast.makeText(WeatherController.this, "Request Failed", Toast.LENGTH_SHORT).show();
-//            }
-//        });
+        AsyncHttpClient client = new AsyncHttpClient();
+
+        client.get(url, new JsonHttpResponseHandler() {
+
+            @Override
+            public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                super.onSuccess(statusCode, headers, response);
+                //called when response HTTP status is "200 OK"
+                Log.d("Bitcoin", "Success! JSON: " + response.toString() + "Status code " + statusCode);
+                try {
+                    //parse JSON response
+                    String price = response.getString("last");
+                    updatePriceUI(price);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+
+            }
+
+            @Override
+            public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+                super.onFailure(statusCode, headers, throwable, errorResponse);
+
+                Log.e("Bitcoin", "Request fail! Status code: " + statusCode);
+                Log.d("Bitcoin", "Fail response " + errorResponse);
+                Log.d("ERROR", throwable.toString());
+                Toast.makeText(MainActivity.this, "Request failed", Toast.LENGTH_SHORT ).show();
+            }
+        });
+
 
 
     }
-
-
+    /*update the price UI with JSON respose*/
+    public void updatePriceUI(String price){
+        mPriceTextView.setText(price);
+    }
 }
